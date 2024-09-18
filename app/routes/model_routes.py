@@ -1,4 +1,5 @@
 import os
+import gc
 from flask import Blueprint, jsonify, request
 from PIL import Image
 import torch
@@ -107,6 +108,16 @@ def classifyImage():
             product_id = document['_id']
 
         logger.info(f"Classification result saved for {image_file.filename} with product ID {product_id}")
+
+        # Cleanup
+        del input_tensor, outputs
+        torch.cuda.empty_cache()
+        gc.collect()
+        # Log cleanup actions
+        logger.info("Cleanup after inference started.")
+        logger.info("Deleted input tensor and model outputs to free memory.")
+        logger.info("Cleared GPU memory cache.")
+        logger.info("Garbage collection invoked.")
 
         return jsonify({
             'predicted_class': predicted_class_name,
