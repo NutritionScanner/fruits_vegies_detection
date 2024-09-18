@@ -67,15 +67,16 @@ def classifyImage():
         input_tensor = preprocess(img).unsqueeze(0)  # Add batch dimension
         logger.info("Image processed and input tensor created")
 
-        # Perform prediction
+        # Perform prediction with mixed precision
         with torch.no_grad():
-            outputs = model(input_tensor)
+            with torch.autocast():  # Enable mixed precision
+                outputs = model(input_tensor)
         logger.info("Model prediction completed")
-        
+
         # Get the predicted class index and name
         predicted_idx = torch.argmax(outputs.logits, dim=1).item()
         predicted_class_name = labels[predicted_idx]
-        confidence_scores = torch.softmax(outputs.logits, dim=1).numpy()[0]
+        confidence_scores = torch.softmax(outputs.logits, dim=1).cpu().numpy()[0]
         confidence_score = float(confidence_scores[predicted_idx])
         logger.info(f"Predicted class: {predicted_class_name}, Confidence: {confidence_score}")
 
