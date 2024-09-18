@@ -27,6 +27,10 @@ model = AutoModelForImageClassification.from_pretrained(model_name)
 model.eval()  # Set the model to evaluation mode
 labels = list(model.config.id2label.values())
 
+# Check if GPU is available and set the device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)  # Move model to the correct device
+
 # Define the image preprocessing transformation
 preprocess = transforms.Compose([
     transforms.Resize((224, 224)),
@@ -64,13 +68,12 @@ def classifyImage():
     try:
         # Open and preprocess the image
         img = Image.open(image_file).convert("RGB")
-        input_tensor = preprocess(img).unsqueeze(0)  # Add batch dimension
+        input_tensor = preprocess(img).unsqueeze(0).to(device)  # Add batch dimension and move tensor to device
         logger.info("Image processed and input tensor created")
 
-        # Perform prediction with mixed precision
+        # Perform prediction
         with torch.no_grad():
-            with torch.autocast():  # Enable mixed precision
-                outputs = model(input_tensor)
+            outputs = model(input_tensor)
         logger.info("Model prediction completed")
 
         # Get the predicted class index and name
