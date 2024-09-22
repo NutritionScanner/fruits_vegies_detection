@@ -23,6 +23,7 @@ app.config['MONGO_URI'] = os.environ.get('MONGO_URI')
 # print("MONGO_URI from app config:", app.config['MONGO_URI'])
 
 # Import routes after the app is initialized to avoid circular imports
-from app.routes import  model_routes
+from app.routes import  model_routes , fetch_routes
 
 app.register_blueprint(model_routes.bp)
+app.register_blueprint(fetch_routes.bp)

@@ -8,7 +8,7 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 from dotenv import load_dotenv
 from transformers import AutoModelForImageClassification
-
+import psutil
 from app.utils.fetch_users_uid import extract_token, get_uid_and_email
 from app.utils.logger import setup_logger 
 
@@ -31,6 +31,11 @@ labels = list(model.config.id2label.values())
 # Check if GPU is available and set the device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model.to(device)  # Move model to the correct device
+
+def log_memory_usage():
+    process = psutil.Process(os.getpid())
+    mem_info = process.memory_info()
+    logger.info(f"Memory usage - RSS: {mem_info.rss / 1024 ** 2:.2f} MB, VMS: {mem_info.vms / 1024 ** 2:.2f} MB")
 
 # Define the image preprocessing transformation
 preprocess = transforms.Compose([
@@ -69,13 +74,19 @@ def classifyImage():
     try:
         # Open and preprocess the image
         img = Image.open(image_file).convert("RGB")
-        input_tensor = preprocess(img).unsqueeze(0).to(device)  # Add batch dimension and move tensor to device
+        input_tensor = preprocess(img).unsqueeze(0)  # Add batch dimension
         logger.info("Image processed and input tensor created")
 
-        # Perform prediction
+        # Log memory usage before prediction
+        log_memory_usage()
+
+        # Perform prediction with mixed precision
         with torch.no_grad():
-            outputs = model(input_tensor)
-        logger.info("Model prediction completed")
+            with torch.autocast(device_type=device.type, dtype=torch.float16):
+                outputs = model(input_tensor.to(device))
+        
+        # Log memory usage after prediction
+        log_memory_usage()
 
         # Get the predicted class index and name
         predicted_idx = torch.argmax(outputs.logits, dim=1).item()
@@ -109,16 +120,6 @@ def classifyImage():
 
         logger.info(f"Classification result saved for {image_file.filename} with product ID {product_id}")
 
-        # Cleanup
-        del input_tensor, outputs
-        torch.cuda.empty_cache()
-        gc.collect()
-        # Log cleanup actions
-        logger.info("Cleanup after inference started.")
-        logger.info("Deleted input tensor and model outputs to free memory.")
-        logger.info("Cleared GPU memory cache.")
-        logger.info("Garbage collection invoked.")
-
         return jsonify({
             'predicted_class': predicted_class_name,
             'confidence': confidence_score,
@@ -130,3 +131,10 @@ def classifyImage():
     except Exception as e:
         logger.error(f"Unexpected error: {str(e)}")
         return jsonify({"error": "An unexpected error occurred"}), 500
+    finally:
+        # Cleanup
+        del input_tensor, outputs
+        torch.cuda.empty_cache()
+        gc.collect()
+        # Log memory usage after cleanup
+        log_memory_usage()
