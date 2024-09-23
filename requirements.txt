@@ -8,11 +8,11 @@ click==8.1.7
 cryptography==43.0.1
 dnspython==2.6.1
 filelock==3.16.0
-firebase-admin==6.5.0
+firebase-admin
 Flask==3.0.3
 Flask-Cors==5.0.0
-Flask-JWT==0.3.2
-Flask-JWT-Extended==4.6.0
+Flask-JWT
+Flask-JWT-Extended
 fsspec==2024.9.0
 google-api-core==2.19.2
 google-api-python-client==2.145.0
@@ -45,7 +45,7 @@ psutil==6.0.0
 pyasn1==0.6.1
 pyasn1_modules==0.4.1
 pycparser==2.22
-PyJWT==2.9.0
+PyJWT
 pymongo==4.8.0
 pyparsing==3.1.4
 python-dotenv==1.0.1
